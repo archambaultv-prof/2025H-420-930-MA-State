@@ -1,74 +1,133 @@
 import time
+from abc import ABC, abstractmethod
 
+# Classe abstraite pour les états du feu
+class EtatFeu(ABC):
+    @abstractmethod
+    def verifier_transition(self, feu):
+        pass
+
+    @abstractmethod
+    def obtenir_affichage_statut(self, feu):
+        pass
+
+    @abstractmethod
+    def obtenir_nom(self):
+        pass
+
+    def demande_pieton(self, feu):
+        pass
+
+    def mode_maintenance(self, feu):
+        pass
+
+    def operation_normale(self, feu):
+        pass
+
+# État rouge du feu
+class EtatRouge(EtatFeu):
+    def obtenir_nom(self):
+        return "ROUGE"
+    
+    def verifier_transition(self, feu):
+        if feu.minuteur >= feu.duree_rouge:
+            feu.set_etat(EtatVert())
+
+    def obtenir_affichage_statut(self, feu):
+        return f"🔴 ROUGE ({feu.duree_rouge - feu.minuteur}s restantes)"
+
+    def demande_pieton(self, feu):
+        # Étendre le feu rouge de 10 secondes pour les piétons
+        if feu.minuteur < feu.duree_rouge:
+            feu.duree_rouge += 10
+
+    def mode_maintenance(self, feu):
+        feu.set_etat(EtatMaintenance())
+
+# État vert du feu
+class EtatVert(EtatFeu):
+    def obtenir_nom(self):
+        return "VERT"
+    
+    def verifier_transition(self, feu):
+        if feu.minuteur >= feu.duree_vert:
+            feu.set_etat(EtatJaune())            
+
+    def obtenir_affichage_statut(self, feu):
+        return f"🟢 VERT ({feu.duree_vert - feu.minuteur}s restantes)"
+
+    def mode_maintenance(self, feu):
+        feu.set_etat(EtatMaintenance())
+
+# État jaune du feu
+class EtatJaune(EtatFeu):
+    def obtenir_nom(self):
+        return "JAUNE"
+    def verifier_transition(self, feu):
+        if feu.minuteur >= feu.duree_jaune:
+            feu.set_etat(EtatRouge())
+
+    def obtenir_affichage_statut(self, feu):
+        return f"🟡 JAUNE ({feu.duree_jaune - feu.minuteur}s restantes)"
+
+    def mode_maintenance(self, feu):
+        feu.set_etat(EtatMaintenance())
+
+# État maintenance du feu
+class EtatMaintenance(EtatFeu):
+    def obtenir_nom(self):
+        return "MAINTENANCE"
+    def verifier_transition(self, feu):
+        pass  
+
+    def obtenir_affichage_statut(self, feu):
+        return "🔴 MAINTENANCE (clignotant)"
+
+    def operation_normale(self, feu):
+        feu.set_etat(EtatRouge())
 class FeuDeCirculation:
     """
     Un système de feu de circulation qui cycle à travers différents états.
     """
     
     def __init__(self):
-        self.etat_actuel = "ROUGE"
+        self.etat= EtatRouge()
         self.minuteur = 0
         self.duree_rouge = 30
         self.duree_jaune = 5
         self.duree_vert = 25
-        
+
+     # Changer l'état du feu
+    def set_etat(self, nouvel_etat):
+        self.etat = nouvel_etat
+        self.minuteur = 0
+
     def obtenir_etat_actuel(self):
-        return self.etat_actuel
-    
+        return self.etat.obtenir_nom()
+
     def obtenir_minuteur(self):
         return self.minuteur
     
     def tic(self):
         """Avancer le minuteur d'une seconde"""
         self.minuteur += 1
-        self._verifier_transition_etat()
-    
-    def _verifier_transition_etat(self):
-        """Vérifier si nous devons passer à un nouvel état basé sur le minuteur"""
-        if self.etat_actuel == "ROUGE":
-            if self.minuteur >= self.duree_rouge:
-                self.etat_actuel = "VERT"
-                self.minuteur = 0
-        elif self.etat_actuel == "VERT":
-            if self.minuteur >= self.duree_vert:
-                self.etat_actuel = "JAUNE"
-                self.minuteur = 0
-        elif self.etat_actuel == "JAUNE":
-            if self.minuteur >= self.duree_jaune:
-                self.etat_actuel = "ROUGE"
-                self.minuteur = 0
-    
+        self.etat.verifier_transition(self)
+
     def demande_pieton(self):
         """Bouton piéton pressé - étendre l'état actuel si possible"""
-        if self.etat_actuel == "ROUGE":
-            # Étendre le feu rouge de 10 secondes pour les piétons
-            if self.minuteur < self.duree_rouge:
-                self.duree_rouge += 10
+        self.etat.demande_pieton(self)
     
     def mode_maintenance(self):
         """Mettre le feu de circulation en mode maintenance (rouge clignotant)"""
-        if self.etat_actuel != "MAINTENANCE":
-            self.etat_actuel = "MAINTENANCE"
-            self.minuteur = 0
+        self.etat.mode_maintenance(self)
     
     def operation_normale(self):
         """Retourner à l'opération normale depuis le mode maintenance"""
-        if self.etat_actuel == "MAINTENANCE":
-            self.etat_actuel = "ROUGE"
-            self.minuteur = 0
+        self.etat.operation_normale(self)
     
     def obtenir_affichage_statut(self):
         """Obtenir une chaîne d'affichage du statut"""
-        if self.etat_actuel == "ROUGE":
-            return f"🔴 ROUGE ({self.duree_rouge - self.minuteur}s restantes)"
-        elif self.etat_actuel == "JAUNE":
-            return f"🟡 JAUNE ({self.duree_jaune - self.minuteur}s restantes)"
-        elif self.etat_actuel == "VERT":
-            return f"🟢 VERT ({self.duree_vert - self.minuteur}s restantes)"
-        elif self.etat_actuel == "MAINTENANCE":
-            return "🔴 MAINTENANCE (clignotant)"
-        else:
-            return "❓ ÉTAT INCONNU"
+        return self.etat.obtenir_affichage_statut(self)
 
 
 def main():
