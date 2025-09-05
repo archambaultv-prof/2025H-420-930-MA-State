@@ -83,7 +83,7 @@ def main():
     
     # Simuler l'opération du feu de circulation
     print("\n--- Simulation d'Opération Normale ---")
-    for seconde in range(90):  # Exécuter pendant 70 secondes
+    for seconde in range(90):  # Exécuter pendant 90 secondes
         print(f"Temps: {seconde:2d}s | {feu_de_circulation.obtenir_affichage_statut()}")
         
         # Simuler quelques événements
